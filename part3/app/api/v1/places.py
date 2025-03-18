@@ -41,28 +41,28 @@ class PlaceList(Resource):
     @api.response(400, 'Title already registered')
     @api.response(400, 'Invalid input data')
     @api.response(404, 'Owner not found')
+    @api.response(403, 'Unauthorized action')
     @jwt_required()
     def post(self):
         """Register a new place"""
         place_data = api.payload
-        current_user_id = get_jwt_identity()
+        current_user = get_jwt_identity()
         
         # Check if the user ID is a dictionary and extract the ID
-        if isinstance(current_user_id, dict) and 'id' in current_user_id:
-            current_user_id = current_user_id['id']
-        elif isinstance(current_user_id, dict):
-            # Try to find the user ID in the dictionary
-            for key in ['id', 'user_id', '_id', 'sub']:
-                if key in current_user_id:
-                    current_user_id = current_user_id[key]
-                    break
-            else:
-                return {'error': 'Could not determine user ID from token'}, 400
-                
-        place_data['owner_id'] = current_user_id
-
-        if current_user_id != place_data['owner_id']:
-            return {'error': 'Unauthorized action'}, 403
+        if isinstance(current_user, dict):
+            current_user_id = current_user.get('id')
+            is_admin = current_user.get('is_admin', False)
+        else:
+            current_user_id = current_user
+            is_admin = False
+            
+        # If user ID couldn't be extracted
+        if not current_user_id:
+            return {'error': 'Could not determine user ID from token'}, 400
+        
+        # Check authorization - users can only create places for themselves unless they're admins
+        if not is_admin and current_user_id != place_data['owner_id']:
+            return {'error': 'Unauthorized action - cannot create places for other users'}, 403
 
         try:
             owner = facade.get_user(place_data['owner_id'])
@@ -87,8 +87,6 @@ class PlaceList(Resource):
 
         except ValueError as e:
             return {'error': str(e)}, 400
-
-
 
     @api.response(200, 'List of places retrieved successfully')
     def get(self):
@@ -139,14 +137,14 @@ class PlaceResource(Resource):
             'id': place.id,
             'title': place.title,
             'description': place.description,
-            'price': place.price,
+            'price': str(place.price),
             'latitude': place.latitude,
             'longitude': place.longitude,
             'owner': owner_data,
             'amenities': amenity_data
         }, 200
 
-    @api.expect(place_model, validate=True)
+    @api.expect(place_model)
     @api.response(200, 'Place updated successfully')
     @api.response(404, 'Place not found')
     @api.response(400, 'Invalid input data')
@@ -157,26 +155,25 @@ class PlaceResource(Resource):
         place = facade.get_place(place_id)
         if not place:
             return {'error': 'Place not found'}, 404
-        current_user_id = get_jwt_identity()
+        current_user = get_jwt_identity()
         
-        # Check if the user ID is a dictionary and extract the ID
-        if isinstance(current_user_id, dict) and 'id' in current_user_id:
-            current_user_id = current_user_id['id']
-        elif isinstance(current_user_id, dict):
-            # Try to find the user ID in the dictionary
-            for key in ['id', 'user_id', '_id', 'sub']:
-                if key in current_user_id:
-                    current_user_id = current_user_id[key]
-                    break
-            else:
-                return {'error': 'Could not determine user ID from token'}, 400
+        # Check if the user identity is a dictionary and extract the relevant data
+        if isinstance(current_user, dict):
+            current_user_id = current_user.get('id')
+            is_admin = current_user.get('is_admin', False)
+        else:
+            current_user_id = current_user
+            is_admin = False
         
-        # Check if current user is the owner
-        if current_user_id != place.owner_id:
+        # If user ID couldn't be extracted
+        if not current_user_id:
+            return {'error': 'Could not determine user ID from token'}, 400
+        
+        # Allow update if user is admin or is the owner of the place
+        if not is_admin and current_user_id != place.owner_id:
             return {'error': 'Unauthorized action'}, 403
 
         update_data = api.payload
-
         try:
             facade.update_place(place_id, update_data)
             updated_place = facade.get_place(place_id)  # Get updated place
@@ -184,7 +181,7 @@ class PlaceResource(Resource):
                 'id': updated_place.id,
                 'title': updated_place.title,
                 'description': updated_place.description,
-                'price': updated_place.price,
+                'price': str(updated_place.price),
                 'latitude': updated_place.latitude,
                 'longitude': updated_place.longitude,
                 'owner_id': updated_place.owner_id,
