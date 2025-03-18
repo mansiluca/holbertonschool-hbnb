@@ -19,9 +19,10 @@ class HBnBFacade:
         return user
 
     def update_user(self, user_id, user_data):
-        user = self.get_user(user_id)
-        if user:
-            self.user_repo.update(user_id, user_data)
+        """
+        Update a user.
+        """
+        self.user_repo.update(user_id, **user_data)
 
     def get_user(self, user_id):
         return self.user_repo.get(user_id)
@@ -54,7 +55,7 @@ class HBnBFacade:
         )
 
     def update_place(self, place_id, place_data):
-        self.place_repo.update(place_id, place_data)
+        self.place_repo.update(place_id, **place_data)
 
     # Amenity
     def create_amenity(self, amenity_data):
@@ -69,7 +70,7 @@ class HBnBFacade:
         return self.amenity_repo.get_all()
 
     def update_amenity(self, amenity_id, amenity_data):
-        self.amenity_repo.update(amenity_id, amenity_data)
+        return self.amenity_repo.update(amenity_id, **amenity_data)
 
     # Review
     def create_review(self, review_data):
@@ -90,7 +91,7 @@ class HBnBFacade:
         return [review for review in self.review_repo.get_all() if review.place_id == place_id]
 
     def update_review(self, review_id, review_data):
-        self.review_repo.update(review_id, review_data)
+        self.review_repo.update(review_id, **review_data)
 
     def delete_review(self, review_id):
         return self.review_repo.delete(review_id)

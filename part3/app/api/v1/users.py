@@ -61,95 +61,41 @@ class UserResource(Resource):
             return {'error': 'User not found'}, 404
         return {'id': user.id, 'first_name': user.first_name, 'last_name': user.last_name, 'email': user.email}, 200
 
-    @api.expect(api.model('UserUpdate', {
-        'first_name': fields.String(description='First name of the user', min_length=1, max_length=50),
-        'last_name': fields.String(description='Last name of the user', min_length=1, max_length=50),
-        'email': fields.String(description='Email of the user'),
-        'password': fields.String(description='Password of the user')
-    }), validate=True)
+    @api.expect(user_model)
     @api.response(200, 'User successfully updated')
     @api.response(400, 'Invalid input data')
     @api.response(403, 'Unauthorized operation')
     @api.response(404, 'User not found')
     @jwt_required()
     def put(self, user_id):
-        """Update user details - Regular users can only update own first/last name, admins can update any user's details"""
+        """Update user details"""
         user_data = api.payload
-        user = facade.get_user(user_id)
-        
-        if not user:
-            return {'error': 'User not found'}, 404
-        
-        # Get current user identity and check admin status
-        current_user_id = get_jwt_identity()
-        is_admin = current_user_id.get('is_admin', False)
-        
-        # If not admin, restrict to own profile and only first/last name
-        if not is_admin:
-            if str(user.id) != str(current_user_id):
-                return {'error': 'Unauthorized action.'}, 403
-            
-            # Check if user is trying to modify email or password
-            if 'email' in user_data or 'password' in user_data:
-                return {'error': 'You cannot modify email or password.'}, 400
-            
-            # Check if there are actual changes
-            if (
-                user.first_name == user_data.get('first_name', user.first_name) and
-                user.last_name == user_data.get('last_name', user.last_name)
-            ):
-                return {'error': 'No changes detected'}, 400
-            
-            # Update first_name and last_name only
-            try:
-                update_data = {
-                    'first_name': user_data.get('first_name', user.first_name),
-                    'last_name': user_data.get('last_name', user.last_name)
-                }
-                facade.update_user(user.id, update_data)
-                user.first_name = update_data['first_name']
-                user.last_name = update_data['last_name']
-            except Exception as e:
-                return {'error': str(e)}, 400
-            
-        # Admin can modify any field
+        for key in user_data:
+            if key not in ['first_name', 'last_name', 'email', 'password']:
+                return {'error': 'Invalid input data.'}, 400
+
+        current_user = get_jwt_identity()
+        if current_user.get('is_admin') is True:
+            is_admin = facade.get_user(current_user['id']).is_admin
+            if not is_admin:
+                return {'error': 'Admin privileges required.'}, 403
+
+            if user_data.get('email'):
+                if facade.get_user_by_email(user_data['email']):
+                    return {'error': 'Email already registered.'}, 400
         else:
-            update_data = {}
-            
-            # For each field in the payload, check and update
-            if 'first_name' in user_data:
-                update_data['first_name'] = user_data['first_name']
-            if 'last_name' in user_data:
-                update_data['last_name'] = user_data['last_name']
-            
-            # Check email uniqueness if changing email
-            if 'email' in user_data:
-                existing_user = facade.get_user_by_email(user_data['email'])
-                if existing_user and str(existing_user.id) != str(user_id):
-                    return {'error': 'Email is already in use'}, 400
-                update_data['email'] = user_data['email']
-            
-            # Handle password update
-            if 'password' in user_data:
-                hashed_password = user.hash_password(user_data['password'])
-                update_data['password'] = hashed_password
-            
-            # If no changes to apply
-            if not update_data:
-                return {'error': 'No changes detected'}, 400
-                
-            try:
-                facade.update_user(user.id, update_data)
-                # Update user object with new values for response
-                for key, value in update_data.items():
-                    setattr(user, key, value)
-            except Exception as e:
-                return {'error': str(e)}, 400
-        
-        # Return updated user details
-        return {
-            'id': user.id,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'email': user.email
-        }, 200
+            if user_data.get('email') or user_data.get('password'):
+                return {'error': 'You cannot modify email or password.'}, 403
+
+            if current_user['id'] != user_id:
+                return {'error': 'Unauthorized action.'}, 403
+
+        if not facade.get_user(user_id):
+            return {'error': 'User not found.'}, 404
+
+        try:
+            facade.update_user(user_id, user_data)
+        except Exception as e:
+            return {'error': str(e)}, 400
+
+        return self.get(user_id)
