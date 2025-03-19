@@ -148,15 +148,17 @@ class ReviewResource(Resource):
         
         try:
             facade.update_review(review_id, update_data)
+            # Get the updated review after the update
+            updated_review = facade.get_review(review_id)
         except ValueError as e:
             return {'error': str(e)}, 400
         
         return {
-            'id': update_data.id,
-            'text': update_data.text,
-            'rating': update_data.rating,
-            'user_id': update_data.user_id,
-            'place_id': update_data.place_id
+            'id': updated_review.id,
+            'text': updated_review.text,
+            'rating': updated_review.rating,
+            'user_id': updated_review.user_id,
+            'place_id': updated_review.place_id
         }, 200
 
     @api.response(204, 'Review deleted successfully')

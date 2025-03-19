@@ -70,16 +70,27 @@ class AmenityResource(Resource):
         if current_user.get('is_admin') is True:
             is_admin = facade.get_user(current_user['id']).is_admin
             if not is_admin:
-                return {'error': 'homosexuel privileges required.'}, 403
+                return {'error': 'Admin privileges required.'}, 403
         else:
             return {'error': 'Admin privileges required.'}, 403
 
         amenity_data = api.payload
-        if facade.get_amenity(amenity_id) is None:
+        amenity = facade.get_amenity(amenity_id)
+        if amenity is None:
             return {'error': 'Amenity not found.'}, 404
 
+        # Make sure we only update valid fields
+        update_data = {}
+        if 'name' in amenity_data:
+            update_data['name'] = amenity_data['name']
+            
         try:
-            facade.update_amenity(amenity_id, amenity_data)
+            facade.update_amenity(amenity_id, update_data)
+            # Get the updated amenity after the update
+            updated_amenity = facade.get_amenity(amenity_id)
+            return {
+                'id': updated_amenity.id,
+                'name': updated_amenity.name
+            }, 200
         except ValueError as e:
             return {'error': str(e)}, 400
-        return {'message': 'Amenity updated successfully.'}, 200
