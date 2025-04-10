@@ -168,11 +168,7 @@ function checkAuthenticationForPlaceDetails() {
   const addReviewSection = document.getElementById('add-review');
   const placeId = getPlaceIdFromURL();
 
-  if (!token) {
-      addReviewSection.style.display = 'none';
-  } else {
-      addReviewSection.style.display = 'block';
-      // Store the token for later use
+  if (addReviewSection) {
       fetchPlaceDetails(token, placeId);
   }
 }
@@ -258,6 +254,16 @@ function displayPlaceDetails(place) {
 
 function checkAuthenticationForReview() {
   const token = getCookie('token');
+
+  const reviewForm = document.getElementById('add-review');
+
+  if (reviewForm) {
+    if (!token) {
+      reviewForm.style.display = 'none';
+    } else {
+      reviewForm.style.display = 'block';
+    }
+  }
   // Don't redirect, just return the token
   return token;
 }
@@ -294,6 +300,8 @@ document.addEventListener('DOMContentLoaded', () => {
               fetchPlaceDetails(token, placeId);
           } else {
               alert('Failed to submit review: ' + response.statusText);
+
+              element
           }
       });
   }
@@ -399,6 +407,7 @@ async function fetchReviews(placeId) {
 }
 
 function displayReviews(reviews) {
+
   const reviewsContainer = document.getElementById('reviews');
   if (!reviewsContainer) {
     console.error('Reviews container not found');
@@ -422,9 +431,9 @@ function displayReviews(reviews) {
     <div class="review-user">
       <div class="review-header">
         <span class="review-author">${review.user.first_name} ${review.user.last_name}</span>
-        <span class="review-date">${new Date(review.created_at).toLocaleDateString()}</span>
       </div>
       <div class="review-rating">${stars}</div>
+      <br>
       <p class="review-text">${review.text}</p>
     </div>
     `;
