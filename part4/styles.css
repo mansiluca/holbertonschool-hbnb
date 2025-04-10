@@ -93,3 +93,11 @@ header .login-button {
     border: 1px solid #ddd;
     border-radius: 10px;
 }
+
+.review-user
+{
+    margin: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}

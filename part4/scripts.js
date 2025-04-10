@@ -419,12 +419,14 @@ function displayReviews(reviews) {
     const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
     
     reviewElement.innerHTML = `
+    <div class="review-user">
       <div class="review-header">
         <span class="review-author">${review.user.first_name} ${review.user.last_name}</span>
         <span class="review-date">${new Date(review.created_at).toLocaleDateString()}</span>
       </div>
       <div class="review-rating">${stars}</div>
       <p class="review-text">${review.text}</p>
+    </div>
     `;
     
     reviewsContainer.appendChild(reviewElement);
