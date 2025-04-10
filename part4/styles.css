@@ -69,3 +69,27 @@ header .login-button {
     border: 1px solid #ddd;
     border-radius: 10px;
 }
+
+.reviews
+{
+    margin: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+.place-info
+{
+    margin: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+.place-details
+{
+    margin: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}

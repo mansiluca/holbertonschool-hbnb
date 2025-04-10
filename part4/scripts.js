@@ -369,3 +369,71 @@ function handleResponse(response) {
       alert('Failed to submit review');
   }
 }
+
+async function fetchReviews(placeId) {
+  try {
+    const token = getCookie('token');
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`http://127.0.0.1:5000/api/v1/reviews/places/${placeId}/reviews`, {
+      method: 'GET',
+      headers: headers,
+      credentials: 'include'
+    });
+    
+    if (response.ok) {
+      const reviews = await response.json();
+      displayReviews(reviews);
+    } else {
+      console.error('Error fetching reviews:', response.statusText);
+    }
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+  }
+}
+
+function displayReviews(reviews) {
+  const reviewsContainer = document.getElementById('reviews');
+  if (!reviewsContainer) {
+    console.error('Reviews container not found');
+    return;
+  }
+
+  reviewsContainer.innerHTML = '<h2>Reviews</h2>';
+  
+  if (reviews.length === 0) {
+    reviewsContainer.innerHTML += '<p>No reviews yet.</p>';
+    return;
+  }
+  
+  reviews.forEach(review => {
+    const reviewElement = document.createElement('div');
+    reviewElement.className = 'review';
+    
+    const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+    
+    reviewElement.innerHTML = `
+      <div class="review-header">
+        <span class="review-author">${review.user.first_name} ${review.user.last_name}</span>
+        <span class="review-date">${new Date(review.created_at).toLocaleDateString()}</span>
+      </div>
+      <div class="review-rating">${stars}</div>
+      <p class="review-text">${review.text}</p>
+    `;
+    
+    reviewsContainer.appendChild(reviewElement);
+  });
+}
+
+// Update fetchPlaceDetails to also fetch reviews
+const originalFetchPlaceDetails = fetchPlaceDetails;
+fetchPlaceDetails = async function(token, placeId) {
+  await originalFetchPlaceDetails(token, placeId);
+  fetchReviews(placeId);
+};
